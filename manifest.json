@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "draj.bsdate",
+  "name": "BS Date (Bikram Sambat)",
+  "version": "1.0.0",
+  "author": "draj",
+  "description": "Nepali Bikram Sambat date beside the AD clock. Left-click toggles Roman/Devanagari, right/middle opens full Patro.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "BS Date",
+    "description": "Bikram Sambat date next to the clock",
+    "category": "Time",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}
