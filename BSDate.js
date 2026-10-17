@@ -1,6 +1,10 @@
 // BSDate.js - Bikram Sambat conversion for Omarchy bar widget.
-// Data source: Nepal Panchanga Nirnayak Samiti data, as published by
-// @sonill/nepali-dates (calendar-data.json), BS 2000-2100.
+// Data source: Nepal Panchanga Nirnayak Samiti data, BS 2000-2100.
+// BS 2081-2083 were corrected against the published calendar (Hamro Patro,
+// @opensource-nepal/node-nepali-datetime and nepali_utils all agree); the
+// earlier table had Ashwin 2083 at 30 days, shifting the year by a day.
+// Years beyond the officially published range are predictions and may still
+// differ between sources.
 // Anchor: BS 2000-01-01 (Baisakh 1) = AD 1943-04-14.
 // Pure JS + QML compatible (imported as `import "BSDate.js" as BS`).
 // Also testable under node.
@@ -89,9 +93,9 @@ var BS_DATA = {
   "2078": [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
   "2079": [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
   "2080": [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
-  "2081": [31, 31, 32, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  "2082": [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  "2083": [31, 31, 32, 31, 31, 30, 30, 30, 29, 30, 30, 30],
+  "2081": [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
+  "2082": [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+  "2083": [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
   "2084": [31, 31, 32, 31, 31, 30, 30, 30, 29, 30, 30, 30],
   "2085": [31, 32, 31, 32, 30, 31, 30, 30, 29, 30, 30, 30],
   "2086": [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
@@ -303,18 +307,23 @@ function weekdayOrder(weekStart) {
   return out;
 }
 
-// ISO-8601 week number (same definition the AD clock uses).
-function isoWeek(year, month0, day) {
-  var date = new Date(Date.UTC(year, month0, day));
-  var weekday = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - weekday);
-  var yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil(((date.getTime() - yearStart.getTime()) / MS_PER_DAY + 1) / 7);
+// Week number within the BS year. Week 1 is the week (starting on weekStart)
+// that contains Baisakh 1, so the count resets at the Nepali new year in
+// mid-April instead of in January as ISO-8601 weeks do.
+function bsWeekOfYear(bsYear, bsMonth1, bsDay, weekStart) {
+  var start = normalizedWeekStart(weekStart, 1);
+  var firstMs = bsToUtcMs(bsYear, 1, 1);
+  if (!isFinite(firstMs)) return 0;
+  var lead = (new Date(firstMs).getUTCDay() - start + 7) % 7;
+  var doy = bsDayOfYear(bsYear, bsMonth1, bsDay);
+  if (doy <= 0) return 0;
+  return Math.floor((lead + doy - 1) / 7) + 1;
 }
 
 // Always six rows of seven days, like the AD clock: the grid is driven by
 // AD-day arithmetic from the BS month's first day and labelled in BS, so
-// month boundaries resolve themselves. Cells carry both calendars.
+// month boundaries resolve themselves. Cells carry both calendars. Week
+// numbers are weeks of the BS year, not ISO weeks.
 function bsMonthGrid(bsYear, bsMonth1, weekStart, todayBsKey) {
   var start = normalizedWeekStart(weekStart, 1);
   var firstMs = bsToUtcMs(bsYear, bsMonth1, 1);
@@ -325,7 +334,8 @@ function bsMonthGrid(bsYear, bsMonth1, weekStart, todayBsKey) {
 
   for (var w = 0; w < 6; w++) {
     var days = [];
-    var thursday = null;
+    var inYear = null;
+    var anyBs = null;
     for (var d = 0; d < 7; d++) {
       var cellMs = firstMs + (w * 7 + d - leading) * MS_PER_DAY;
       var cellDate = new Date(cellMs);
@@ -334,7 +344,8 @@ function bsMonthGrid(bsYear, bsMonth1, weekStart, todayBsKey) {
       var adD = cellDate.getUTCDate();
       var weekday = cellDate.getUTCDay();
       var cellBs = adToBs(adY, adM0, adD);
-      if (weekday === 4) thursday = { year: adY, month: adM0, day: adD };
+      if (cellBs && !anyBs) anyBs = cellBs;
+      if (cellBs && cellBs.year === bsYear && !inYear) inYear = cellBs;
       days.push({
         key: cellBs ? bsKey(cellBs) : "ad-" + adY + "-" + adM0 + "-" + adD,
         bsYear: cellBs ? cellBs.year : 0,
@@ -349,9 +360,17 @@ function bsMonthGrid(bsYear, bsMonth1, weekStart, todayBsKey) {
         today: !!cellBs && bsKey(cellBs) === today
       });
     }
-    // Seven consecutive days always contain exactly one Thursday.
+    // Anchor each row on a day that belongs to the year on screen, so boundary
+    // rows that spill into the neighbouring BS year still read as week 1 of
+    // Baisakh or the closing week of Chaitra rather than restarting. A row
+    // made up entirely of the next BS year (e.g. the trailing row of a Chaitra
+    // grid) is labelled in that next year instead.
+    var weekNo;
+    if (inYear) weekNo = bsWeekOfYear(bsYear, inYear.month, inYear.day, start);
+    else if (anyBs) weekNo = bsWeekOfYear(anyBs.year, anyBs.month, anyBs.day, start);
+    else weekNo = weeks.length ? weeks[weeks.length - 1].week + 1 : 1;
     weeks.push({
-      week: isoWeek(thursday.year, thursday.month, thursday.day),
+      week: weekNo,
       days: days
     });
   }
@@ -375,7 +394,7 @@ if (typeof module !== "undefined") {
     weekStartSettingName: weekStartSettingName,
     toggledWeekStart: toggledWeekStart,
     weekdayOrder: weekdayOrder,
-    isoWeek: isoWeek,
+    bsWeekOfYear: bsWeekOfYear,
     formatRoman: formatRoman,
     formatNepali: formatNepali,
     formatLongRoman: formatLongRoman,

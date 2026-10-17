@@ -15,7 +15,7 @@ one opens its own calendar when clicked.
 - **Left-click** opens a full BS calendar popup:
   - Hero with today's BS date + AD equivalent
   - BS year-progress rail
-  - 6×7 month grid with ISO week numbers, today highlighted
+  - 6×7 month grid with BS-year week numbers, today highlighted
   - Bilingual month label (`Ashwin • असोज २०८३`), month/year stepping
   - Hover any day to see its exact AD date
 - **Right-click** toggles Roman ↔ Devanagari (`19 Ashwin 2083` ↔ `१९ असोज २०८३`)
@@ -89,12 +89,18 @@ omarchy plugin remove draj.bsdate
 
 ## Data & accuracy
 
-- Month-length table: BS **2000–2100** (AD 1943–2043), from the community-verified
-  [`@sonill/nepali-dates`](https://github.com/sonill/nepali-dates) dataset
-  (`calendar-data.json`), sourced from the Nepal Panchanga Nirnayak Samiti
+- Month-length table: BS **2000–2100** (AD 1943–2043), from the Nepal Panchanga
+  Nirnayak Samiti data. BS 2081–2083 were corrected against the published
+  calendar ([Hamro Patro](https://www.hamropatro.com/),
+  [`node-nepali-datetime`](https://github.com/opensource-nepal/node-nepali-datetime)
+  and [`nepali_utils`](https://github.com/sarbagyastha/nepali_utils) agree).
+  Years past the officially published calendar are predictions and can differ
+  between sources
 - Anchor: BS 2000-01-01 (Baisakh 1) = AD 1943-04-14
 - Outside the supported range the widget shows `BS --` rather than a wrong date
-- Week numbers use the same ISO-8601 definition as the stock AD clock
+- Week numbers are weeks of the **BS year**: week 1 is the week containing
+  Baisakh 1, so they reset at the Nepali new year in mid-April rather than in
+  January like the stock AD clock's ISO-8601 weeks
 
 ## Developing
 

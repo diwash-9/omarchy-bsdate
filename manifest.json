@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "draj.bsdate",
   "name": "BS Date (Bikram Sambat)",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "draj",
   "description": "Nepali Bikram Sambat date beside the AD clock. Left-click toggles Roman/Devanagari, right/middle opens full Patro.",
   "kinds": [
