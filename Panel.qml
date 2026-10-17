@@ -4,7 +4,7 @@ import qs.Commons
 import qs.Ui
 import "BSDate.js" as BS
 
-// Bikram Sambat calendar popup: a BS month grid with ISO week numbers,
+// Bikram Sambat calendar popup: a BS month grid with BS-year week numbers,
 // built to sit beside the AD clock panel — same hero-over-detail
 // composition, same spacing scale, same small-caps labels.
 //
@@ -341,7 +341,7 @@ Panel {
             }
           }
 
-          // ---- BS month grid with ISO week numbers.
+          // ---- BS month grid with BS-year week numbers.
           Item {
             width: parent.width
             height: gridColumn.y + gridColumn.height
@@ -393,7 +393,7 @@ Panel {
 
                   PanelToolTip {
                     visible: weekStartMouse.containsMouse
-                    text: "Start weeks on " + root.nextWeekStartLabel
+                    text: "BS week numbers • start weeks on " + root.nextWeekStartLabel
                     fontFamily: root.contentFontFamily
                   }
                 }

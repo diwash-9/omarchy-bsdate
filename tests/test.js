@@ -29,26 +29,47 @@ for (const [y, m, d] of samples) {
     !!back && back.year === y && back.month === m + 1 && back.day === d);
 }
 
+// Regression: 17 Oct 2026 is 31 Ashwin 2083 (Ashwin 2083 has 31 days).
+const todayBs = BS.adToBs(2026, 9, 17);
+check("2026-10-17 -> 2083-06-31",
+  todayBs && todayBs.year === 2083 && todayBs.month === 6 && todayBs.day === 31);
+check("1 Ashwin 2083 -> 2026-09-17",
+  (() => { const ad = BS.bsToAd(2083, 6, 1); return ad && ad.year === 2026 && ad.month === 9 && ad.day === 17; })());
+check("Ashwin 2083 has 31 days",
+  BS.MONTH_EN[5] === "Ashwin" && BS.bsToAd(2083, 6, 31) !== null && BS.bsToAd(2083, 6, 32) === null);
+
 // Out-of-range AD dates return null instead of garbage.
 check("before anchor returns null", BS.adToBs(1943, 3, 13) === null);
 
-// Grid invariants for a known month: Ashwin 2083 has 30 days.
-const grid = BS.bsMonthGrid(2083, 6, 1, "2083-06-19");
+// Grid invariants for a known month: Ashwin 2083 has 31 days.
+const grid = BS.bsMonthGrid(2083, 6, 1, "2083-06-31");
 check("grid has 6 weeks", grid.length === 6);
 check("grid has 42 cells",
   grid.reduce((n, w) => n + w.days.length, 0) === 42);
 const flat = grid.flatMap((w) => w.days);
 check("exactly one today cell",
   flat.filter((c) => c.today).length === 1);
-check("today cell is 2083-06-19",
-  flat.some((c) => c.today && c.bsYear === 2083 && c.bsMonth === 6 && c.bsDay === 19));
-check("30 in-month days for Ashwin 2083",
-  flat.filter((c) => c.inMonth).length === 30);
+check("today cell is 2083-06-31",
+  flat.some((c) => c.today && c.bsYear === 2083 && c.bsMonth === 6 && c.bsDay === 31));
+check("31 in-month days for Ashwin 2083",
+  flat.filter((c) => c.inMonth).length === 31);
 const weekNos = grid.map((w) => w.week);
-check("ISO weeks run consecutively",
+check("BS weeks run consecutively",
   weekNos.every((v, i) => i === 0 || v === weekNos[i - 1] + 1));
 check("all cells carry both calendars",
   flat.every((c) => c.adYear > 0 && c.adDay > 0 && c.weekday >= 0 && c.weekday <= 6));
+
+// Week numbers are weeks of the BS year, resetting at Baisakh 1.
+const baisakh = BS.bsMonthGrid(2083, 1, 1, "2083-01-01");
+check("Baisakh 2083 grid starts at BS week 1",
+  baisakh.length > 0 && baisakh[0].week === 1);
+check("week 1 cell is Baisakh 1",
+  (() => { const ad = BS.bsToAd(2083, 1, 1); const bs = BS.adToBs(ad.year, ad.month - 1, ad.day);
+    return baisakh[0].days.some((c) => c.key === BS.bsKey(bs)); })());
+check("bsWeekOfYear resets at Baisakh",
+  BS.bsWeekOfYear(2083, 1, 1, 1) === 1 && BS.bsWeekOfYear(2083, 12, 30, 1) > 48);
+check("Chaitra 2082 is late in its own year, not reset with 2083",
+  BS.bsWeekOfYear(2082, 12, 30, 1) > 48 && BS.bsWeekOfYear(2083, 1, 1, 1) === 1);
 
 // Year progress stays within bounds.
 for (const [y, m, d] of [[2000, 1, 1], [2083, 6, 19], [2100, 12, 30]]) {
